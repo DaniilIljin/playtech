@@ -80,7 +80,7 @@ The processing should include the following steps:
 - Validate that the amount is a valid (positive) number and within deposit/withdraw limits.
 - For withdrawals, validate that the user has a sufficient balance for a withdrawal.
 - Allow withdrawals only with the same payment account that has previously been successfully used for deposit (declined deposits with an account do not make it eligible for withdrawals; at least one approved deposit is needed).
-- dto.Transaction type that isn't deposit or withdrawal should be declined
+- transaction type that isn't deposit or withdrawal should be declined
 - Users cannot share iban/card; payment account used by one user can no longer be used by another (Example Scenario for this validation provided below).
 - In case of unexpected errors with processing transactions, skip the transaction. Do not interrupt processing of the remaining transactions
 
@@ -88,11 +88,11 @@ Transactions that fail any of the validations should be declined (i.e., the user
 
 **Example Scenario:**
 
-- dto.User A uses account X for deposit. Deposit gets approved.
-- dto.User A uses account Y for deposit. Deposit gets declined due to some validation.
-- dto.User B uses account X for deposit. Deposit gets declined because this account was already used by user A.
-- dto.User B uses account Y for deposit. Deposit gets approved because nobody successfully used this account yet.
-- dto.User A uses account X for deposit. Deposit gets approved because account X belongs to this user.
+- user A uses account X for deposit. Deposit gets approved.
+- user A uses account Y for deposit. Deposit gets declined due to some validation.
+- user B uses account X for deposit. Deposit gets declined because this account was already used by user A.
+- user B uses account Y for deposit. Deposit gets approved because nobody successfully used this account yet.
+- user A uses account X for deposit. Deposit gets approved because account X belongs to this user.
 
 **Money amounts in the input and output are expected to be in the following format:**
 
