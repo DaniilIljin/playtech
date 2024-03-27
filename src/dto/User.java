@@ -11,6 +11,16 @@ public class User {
     public Float withdrawMin;
     public Float withdrawMax;
 
+    private String accountNumber = null;
+
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    public void setAccountNumber(String accountNumber) {
+        this.accountNumber = accountNumber;
+    }
+
     public String getUserId() {
         return userId;
     }
@@ -81,5 +91,20 @@ public class User {
 
     public void setWithdrawMax(Float withdrawMax) {
         this.withdrawMax = withdrawMax;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "userId='" + userId + '\'' +
+                ", username='" + username + '\'' +
+                ", balance=" + balance +
+                ", country='" + country + '\'' +
+                ", frozen='" + frozen + '\'' +
+                ", depositMin=" + depositMin +
+                ", depositMax=" + depositMax +
+                ", withdrawMin=" + withdrawMin +
+                ", withdrawMax=" + withdrawMax +
+                '}';
     }
 }

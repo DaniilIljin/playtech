@@ -35,7 +35,7 @@ public class Reader {
 
     private static User processUser(String line){
         String[] values = line.split(",");
-        if (values.length != User.class.getDeclaredFields().length) return null;
+//        if (values.length != User.class.getDeclaredFields().length) return null;
         User user = new User();
         user.userId = values[0];
         user.username = values[1];
@@ -64,7 +64,7 @@ public class Reader {
 
     private static Transaction processTransaction(String line) {
         String[] values = line.split(",");
-        if (values.length != Transaction.class.getDeclaredFields().length) return null;
+//        if (values.length != Transaction.class.getDeclaredFields().length) return null;
         Transaction transaction = new Transaction();
         transaction.transactionId = values[0];
         transaction.userId = values[1];
@@ -102,7 +102,6 @@ public class Reader {
 
     private static BinMapping processBinMapping(String line) {
         String[] values = line.split(",");
-        if (values.length != Transaction.class.getDeclaredFields().length) return null;
         BinMapping binMapping = new BinMapping();
         binMapping.name = values[0];
         try {

@@ -37,5 +37,5 @@ TRANSACTION_ID,STATUS,MESSAGE
 10601,APPROVED,OK
 10602,APPROVED,OK
 10603,DECLINED,Not enough balance to withdraw 200.99 - balance is too low at 10.00
-10603,DECLINED,dto.Transaction 10603 already processed (id non-unique)
+10603,DECLINED,Transaction 10603 already processed (id non-unique)
 10703,DECLINED,Account 5449200499486932 is in use by other user

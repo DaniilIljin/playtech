@@ -7,6 +7,7 @@ import util.Reader;
 import util.Writer;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -16,6 +17,7 @@ public class TransactionProcessorSample {
     private List<User> users;
     private List<Transaction> transactions;
     private List<BinMapping> binMappings;
+    private StringBuilder stringBuilder = new StringBuilder();
 
     public TransactionProcessorSample(
             final List<User> users,
@@ -43,7 +45,7 @@ public class TransactionProcessorSample {
         for (Transaction transaction : transactions) {
             if (!validateUniqueId(transaction)) continue;
             if (!validateUserExistAndNotFrozen(transaction)) continue;
-            if (!validatePaymentMethod(transaction)) continue;
+            if (!validateTransferPaymentMethod(transaction)) continue;
 //            if (!validateCountry(transaction)) continue;
             if (!validateAmountAndUserLimits(transaction)) continue;
             if (!validateWithdraw(transaction)) continue;
@@ -55,10 +57,20 @@ public class TransactionProcessorSample {
     }
 
     private void executeTransaction(Transaction transaction) {
+        User user = getTransactionUser(transaction);
+        if (user.getAccountNumber() == null){
+            user.setAccountNumber(transaction.getAccountNumber());
+        }
         addApprovedEvent(transaction);
     }
 
     private boolean validateOneUserOneAccount(Transaction transaction) {
+        User user = getTransactionUser(transaction);
+        if (user.getAccountNumber() != null &&
+                !user.getAccountNumber().equals(transaction.getAccountNumber())){
+            addDeclinedEvent(transaction, String.format("Cannot withdraw with a new account %s", transaction.getAccountNumber()));
+            return false;
+        }
         return true;
     }
 
@@ -72,9 +84,9 @@ public class TransactionProcessorSample {
 
     private boolean validateWithdraw(Transaction transaction) {
         if (transaction.type.equals(Constants.TRANSACTION_TYPE_WITHDRAW)){
-            User user = getUser(transaction);
+            User user = getTransactionUser(transaction);
             if (user.balance < transaction.amount){
-                addDeclinedEvent(transaction, "User balance is lower than withdraw a");
+                addDeclinedEvent(transaction, String.format("Not enough balance to withdraw %f - balance is too low at %f", transaction.getAmount(), user.getBalance()));
                 return false;
             }
         }
@@ -83,11 +95,11 @@ public class TransactionProcessorSample {
 
     private boolean validateAmountAndUserLimits(Transaction transaction) {
         if (transaction.amount < 0){
-            addDeclinedEvent(transaction, "Amount is negative for transaction: " + transaction.transactionId);
+            addDeclinedEvent(transaction, "Amount is negative for transaction");
             return false;
         }
 
-        User user = getUser(transaction);
+        User user = getTransactionUser(transaction);
 
         if (transaction.type.equals(Constants.TRANSACTION_TYPE_WITHDRAW)){
             if (user.withdrawMax < transaction.amount){
@@ -101,11 +113,11 @@ public class TransactionProcessorSample {
         }
         if (transaction.type.equals(Constants.TRANSACTION_TYPE_DEPOSIT)){
             if (user.depositMax < transaction.amount){
-                addDeclinedEvent(transaction, "Amount is bigger than user's deposit limit for transaction: " + transaction.transactionId);
+                addDeclinedEvent(transaction, String.format("Amount %f is over the deposit limit of %f", transaction.amount, user.depositMax));
                 return false;
             }
             if (user.depositMin > transaction.amount){
-                addDeclinedEvent(transaction, "Amount is lower than user's deposit limit for transaction: " + transaction.transactionId);
+                addDeclinedEvent(transaction, String.format("Amount %f is under the deposit limit of %f", transaction.amount, user.depositMin));
                 return false;
             }
         }
@@ -114,7 +126,7 @@ public class TransactionProcessorSample {
 
     private boolean validateCountry(Transaction transaction) {
         if (transaction.method.equals(Constants.PAYMENT_METHOD_CARD)){
-            String country = getUser(transaction).country;
+            String country = getTransactionUser(transaction).country;
             Long cardNumber = Long.parseLong(transaction.accountNumber);
             Optional<BinMapping> bin = binMappings.stream().filter(b -> b.getRangeFrom() <= cardNumber
                     && b.getRangeTo() >= cardNumber).findFirst();
@@ -127,8 +139,42 @@ public class TransactionProcessorSample {
         return true;
     }
 
-    private boolean validatePaymentMethod(Transaction transaction) {
+    private boolean validateTransferPaymentMethod(Transaction transaction) {
+        if (transaction.method.equals(Constants.PAYMENT_METHOD_TRANSFER)){
+            stringBuilder.append(transaction.accountNumber);
+            String firstPart = stringBuilder.substring(0, 4);
+            String secondPart = stringBuilder.substring(4, 8);
+            String thirdPart = stringBuilder.substring(8);
+            stringBuilder.setLength(0);
+
+            for (char c : secondPart.toCharArray()) {
+                stringBuilder.append(convertToInt(c));
+            }
+
+            stringBuilder.append(thirdPart);
+
+            for (char c : firstPart.toCharArray()) {
+                stringBuilder.append(convertToInt(c));
+            }
+            BigInteger checkNumber = new BigInteger(stringBuilder.toString());
+            stringBuilder.setLength(0);
+
+            if (!checkNumber.remainder(BigInteger.valueOf(97)).equals(BigInteger.ONE)){
+                addDeclinedEvent(transaction,
+                        String.format("Invalid iban %s", transaction.accountNumber));
+                return false;
+            }
+        }
         return true;
+    }
+
+    private Integer convertToInt(Character character){
+        if (Character.isAlphabetic(character)){
+            return character - 55;
+        } else if (Character.isDigit(character)){
+            return character - 48;
+        }
+        return null;
     }
 
     private boolean validateUserExistAndNotFrozen(Transaction transaction){
@@ -144,8 +190,7 @@ public class TransactionProcessorSample {
 
     private boolean validateUniqueId(Transaction transaction) {
         Optional<Event> event = events.stream().filter(
-                e -> e.transactionId.equals(transaction.transactionId)
-                        && e.status.equals(Event.STATUS_APPROVED)).findFirst();
+                e -> e.transactionId.equals(transaction.transactionId)).findFirst();
         if (event.isPresent()){
             addDeclinedEvent(transaction,
                     String.format("Transaction %s already processed (id non-unique)", transaction.transactionId));
@@ -153,7 +198,7 @@ public class TransactionProcessorSample {
         }
         return true;
     }
-    private User getUser(Transaction transaction) {
+    private User getTransactionUser(Transaction transaction) {
         return users.stream().filter(u -> u.userId.equals(transaction.userId)).toList().getFirst();
     }
     private void addDeclinedEvent(Transaction transaction, String message){
