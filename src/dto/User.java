@@ -11,14 +11,23 @@ public class User {
     public Float withdrawMin;
     public Float withdrawMax;
 
-    private String accountNumber = null;
+    private String cardAccountNumber = null;
+    private String transferAccountNumber = null;
 
-    public String getAccountNumber() {
-        return accountNumber;
+    public String getCardAccountNumber() {
+        return cardAccountNumber;
     }
 
-    public void setAccountNumber(String accountNumber) {
-        this.accountNumber = accountNumber;
+    public void setCardAccountNumber(String cardAccountNumber) {
+        this.cardAccountNumber = cardAccountNumber;
+    }
+
+    public String getTransferAccountNumber() {
+        return transferAccountNumber;
+    }
+
+    public void setTransferAccountNumber(String transferAccountNumber) {
+        this.transferAccountNumber = transferAccountNumber;
     }
 
     public String getUserId() {
