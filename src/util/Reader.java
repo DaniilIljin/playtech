@@ -64,7 +64,6 @@ public class Reader {
 
     private static Transaction processTransaction(String line) {
         String[] values = line.split(",");
-//        if (values.length != Transaction.class.getDeclaredFields().length) return null;
         Transaction transaction = new Transaction();
         transaction.transactionId = values[0];
         transaction.userId = values[1];

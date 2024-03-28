@@ -13,7 +13,7 @@ public class Writer {
         try (final FileWriter writer = new FileWriter(filePath.toFile(), false)) {
             writer.append("USER_ID,BALANCE\n");
             for (final var user : users) {
-                writer.append(user.getUserId()).append(",").append(user.getBalance().toString()).append("\n");
+                writer.append(user.getUserId()).append(",").append(String.format("%.2f", user.getBalance()).replace(",",".")).append("\n");
             }
         }
     }
@@ -26,4 +26,5 @@ public class Writer {
             }
         }
     }
+
 }
