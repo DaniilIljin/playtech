@@ -53,9 +53,8 @@ public class TransactionProcessorSample {
         return validateUniqueId(transaction);
     }
     private Event validateUniqueId(Transaction transaction) {
-        boolean isProcessedEvent = events.stream().anyMatch(
-                e -> e.transactionId.equals(transaction.transactionId));
-        if (isProcessedEvent){
+        boolean isIdUnique = events.stream().anyMatch(e -> e.transactionId.equals(transaction.transactionId));
+        if (isIdUnique){
             return returnDeclinedEvent(transaction, String.format("Transaction %s already processed (id non-unique)", transaction.transactionId));
         }
         return validateUserExistAndNotFrozen(transaction);
@@ -70,19 +69,19 @@ public class TransactionProcessorSample {
 
     private Event validateTransferPaymentMethod(Transaction transaction) {
         if (transaction.method.equals(Transaction.PAYMENT_METHOD_TRANSFER)){
-            stringBuilder.append(transaction.accountNumber);
-            String firstPart = stringBuilder.substring(0, 4);
-            String secondPart = stringBuilder.substring(4);
             stringBuilder.setLength(0);
-            for (char c : secondPart.toCharArray()) {
+            stringBuilder.append(transaction.accountNumber);
+            String checkDigits = stringBuilder.substring(0, 4);
+            String bban = stringBuilder.substring(4);
+            stringBuilder.setLength(0);
+            for (char c : bban.toCharArray()) {
                 stringBuilder.append(convertToInt(c));
             }
-            for (char c : firstPart.toCharArray()) {
+            for (char c : checkDigits.toCharArray()) {
                 stringBuilder.append(convertToInt(c));
             }
             try {
                 BigInteger checkNumber = new BigInteger(stringBuilder.toString());
-                stringBuilder.setLength(0);
                 if (!checkNumber.remainder(BigInteger.valueOf(97)).equals(BigInteger.ONE)){
                     return returnDeclinedEvent(transaction, String.format("Invalid iban %s", transaction.accountNumber));
                 }
@@ -241,9 +240,7 @@ public class TransactionProcessorSample {
     private Event returnDeclinedEvent(Transaction transaction, String message){
         return new Event(transaction.transactionId, Event.STATUS_DECLINED, message);
     }
-
     private String getISO3(String iso2Country){
-        Locale locale = new Locale("", iso2Country);
-        return locale.getISO3Country();
+        return Locale.of("", iso2Country).getISO3Country();
     }
 }
