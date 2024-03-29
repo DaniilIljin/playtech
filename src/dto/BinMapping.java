@@ -1,7 +1,5 @@
 package dto;
 
-import java.math.BigInteger;
-
 public class BinMapping {
     public static final String DEBIT_CARD = "DC";
     public static final String CREDIT_CARD = "CC";

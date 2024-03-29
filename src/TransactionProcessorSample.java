@@ -59,7 +59,7 @@ public class TransactionProcessorSample {
                 validateAmountAndUserLimits(transaction, user) &&
                 validateEnoughForWithdraw(transaction, user) &&
                 validateIBAN(transaction) &&
-                validateWithdrawFromExistingAccount(transaction, user) &&
+                validateWithdrawFromExistingAccount(transaction) &&
                 validateOnlyDebitCardPayment(transaction) &&
                 validateCountry(transaction, user)
                 ;
@@ -169,7 +169,7 @@ public class TransactionProcessorSample {
         return true;
     }
 
-    private boolean validateWithdrawFromExistingAccount(Transaction transaction, User user) {
+    private boolean validateWithdrawFromExistingAccount(Transaction transaction) {
         if (transaction.getType().equals(Transaction.TRANSACTION_TYPE_WITHDRAW)
                 && userAccounts.get(transaction.getAccountNumber()) == null) {
             addDeclinedEvent(transaction, String.format("Cannot withdraw with a new account %s", transaction.getAccountNumber()));
@@ -235,33 +235,5 @@ public class TransactionProcessorSample {
 
     private String getISO3(String iso2Country) {
         return Locale.of("", iso2Country).getISO3Country();
-    }
-
-    public static boolean isValidIBAN(String iban) {
-        iban = iban.replaceAll("\\s", "").toUpperCase();
-
-        for (int i = 0; i < 2; i++) {
-            if (!Character.isLetter(iban.charAt(i))) {
-                return false;
-            }
-        }
-        iban = iban.substring(4) + iban.substring(0, 4);
-
-        // Replace each letter in the string with two digits, thereby expanding the string
-        StringBuilder numericIBAN = new StringBuilder();
-        for (int i = 0; i < iban.length(); i++) {
-            char c = iban.charAt(i);
-            if (Character.isLetter(c)) {
-                numericIBAN.append(Character.getNumericValue(c));
-            } else {
-                numericIBAN.append(c);
-            }
-        }
-
-        // Convert the string to a BigInteger
-        BigInteger ibanNumericValue = new BigInteger(numericIBAN.toString());
-
-        // Check if the remainder when dividing the IBAN number by 97 is 1
-        return ibanNumericValue.mod(BigInteger.valueOf(97)).intValue() == 1;
     }
 }

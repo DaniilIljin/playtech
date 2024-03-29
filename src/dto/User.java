@@ -3,7 +3,6 @@ package dto;
 import java.math.BigDecimal;
 
 public class User {
-    public static final String USER_FROZEN = "1";
     public static final String USER_NOT_FROZEN = "0";
     private String userId;
     private String username;
