@@ -43,7 +43,7 @@ e1bd206f-599f-4a4f-870c-ab460411f75c,DECLINED,Amount 214.76 is under the withdra
 c2aea040-ec74-4c98-99c8-9b3ec4de34e9,DECLINED,Cannot withdraw with a new account 514421275281020790
 d9eaa72b-30ff-4827-975b-a1d030e17ef9,DECLINED,Amount 238.61 is over the deposit limit of 183.00
 65b1636a-0a13-456c-9755-62d82e0e846c,APPROVED,OK
-e1391fa4-d193-4223-85ad-88ba170b0093,DECLINED,dto.Transaction e1391fa4-d193-4223-85ad-88ba170b0093 already processed (id non-unique)
+e1391fa4-d193-4223-85ad-88ba170b0093,DECLINED,Transaction e1391fa4-d193-4223-85ad-88ba170b0093 already processed (id non-unique)
 3c114944-5b5b-4c65-a26c-1f72311b56cc,APPROVED,OK
 66b208d9-76ae-4d6d-b4dc-853d904b39e4,DECLINED,Amount 175.20 is under the withdraw limit of 252.00
 8a7b3702-c1c1-4d88-919b-a7680fd0314c,DECLINED,Cannot withdraw with a new account 537228175820038111

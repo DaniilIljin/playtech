@@ -1,6 +1,8 @@
 package dto;
 
 public class BinMapping {
+    public static final String DEBIT_CARD = "DC";
+    public static final String CREDIT_CARD = "CC";
     public String name;
     public Long rangeFrom;
     public Long rangeTo;

@@ -1,6 +1,8 @@
 package dto;
 
 public class User {
+    public static final String USER_FROZEN = "1";
+    public static final String USER_NOT_FROZEN = "0";
     public String userId;
     public String username;
     public Float balance;
@@ -10,7 +12,7 @@ public class User {
     public Float depositMax;
     public Float withdrawMin;
     public Float withdrawMax;
-
+    private String lastUsedDepositAccount;
     private String cardAccountNumber = null;
     private String transferAccountNumber = null;
 
@@ -115,5 +117,13 @@ public class User {
                 ", withdrawMin=" + withdrawMin +
                 ", withdrawMax=" + withdrawMax +
                 '}';
+    }
+
+    public String getLastUsedDepositAccount() {
+        return lastUsedDepositAccount;
+    }
+
+    public void setLastUsedDepositAccount(String lastUsedDepositAccount) {
+        this.lastUsedDepositAccount = lastUsedDepositAccount;
     }
 }
