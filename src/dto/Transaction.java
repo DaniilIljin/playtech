@@ -1,22 +1,29 @@
 package dto;
 
+import java.math.BigDecimal;
+
 public class Transaction {
     public static final String TRANSACTION_TYPE_DEPOSIT = "DEPOSIT";
     public static final String TRANSACTION_TYPE_WITHDRAW = "WITHDRAW";
     public static final String PAYMENT_METHOD_CARD = "CARD";
     public static final String PAYMENT_METHOD_TRANSFER = "TRANSFER";
 
-    public String transactionId;
-    public String userId ;
-    public String type;
-    public Float amount;
-    public String accountNumber;
-    public String method;
+    private String transactionId;
+    private String userId ;
+    private String type;
+    private BigDecimal amount;
+    private String accountNumber;
+    private String method;
 
     public String getTransactionId() {
         return transactionId;
     }
-
+    public BigDecimal getAmount() {
+        return amount;
+    }
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
     public void setTransactionId(String transactionId) {
         this.transactionId = transactionId;
     }
@@ -37,13 +44,6 @@ public class Transaction {
         this.type = type;
     }
 
-    public Float getAmount() {
-        return amount;
-    }
-
-    public void setAmount(Float amount) {
-        this.amount = amount;
-    }
 
     public String getAccountNumber() {
         return accountNumber;

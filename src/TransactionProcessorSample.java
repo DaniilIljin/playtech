@@ -6,24 +6,23 @@ import util.Reader;
 import util.Writer;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.file.Paths;
 import java.util.*;
 
 public class TransactionProcessorSample {
     private final List<Event> events = new ArrayList<>();
+    private final Map<String, String> userAccounts = new HashMap<>();
     private final List<User> users;
     private final List<Transaction> transactions;
     private final List<BinMapping> binMappings;
-    private User currentUser = null;
-    private BinMapping currentBinMapping = null;
     private final StringBuilder stringBuilder = new StringBuilder();
 
     public TransactionProcessorSample(
             final List<User> users,
             final List<Transaction> transactions,
-            final List<BinMapping> binMappings)
-    {
+            final List<BinMapping> binMappings) {
         this.users = users;
         this.transactions = transactions;
         this.binMappings = binMappings;
@@ -43,204 +42,226 @@ public class TransactionProcessorSample {
 
     private void processTransactions() {
         for (Transaction transaction : transactions) {
-            Event event = validate(transaction);
-            if(event != null) events.add(event);
-        }
-    }
-    private Event validate(Transaction transaction){
-        currentUser = null;
-        currentBinMapping = null;
-        return validateUniqueId(transaction);
-    }
-    private Event validateUniqueId(Transaction transaction) {
-        boolean isIdUnique = events.stream().anyMatch(e -> e.transactionId.equals(transaction.transactionId));
-        if (isIdUnique){
-            return returnDeclinedEvent(transaction, String.format("Transaction %s already processed (id non-unique)", transaction.transactionId));
-        }
-        return validateUserExistAndNotFrozen(transaction);
-    }
-
-    private Event validateUserExistAndNotFrozen(Transaction transaction){
-        if(getUser(transaction) == null){
-            return returnDeclinedEvent(transaction, String.format("User %s not found in Users", transaction.userId));
-        }
-        return validateTransferPaymentMethod(transaction);
-    }
-
-    private Event validateTransferPaymentMethod(Transaction transaction) {
-        if (transaction.method.equals(Transaction.PAYMENT_METHOD_TRANSFER)){
-            stringBuilder.setLength(0);
-            stringBuilder.append(transaction.accountNumber);
-            String checkDigits = stringBuilder.substring(0, 4);
-            String bban = stringBuilder.substring(4);
-            stringBuilder.setLength(0);
-            for (char c : bban.toCharArray()) {
-                stringBuilder.append(convertToInt(c));
+            Optional<User> user = getUserIfExistsAndNotFrozen(transaction);
+            if (user.isEmpty()) {
+                addDeclinedEvent(transaction, String.format("User %s not found in Users", transaction.getUserId()));
+                continue;
             }
-            for (char c : checkDigits.toCharArray()) {
-                stringBuilder.append(convertToInt(c));
+            if (validate(transaction, user.get()))
+                events.add(createSuccessfulEvent(transaction, user.get()));
+        }
+    }
+
+    private boolean validate(Transaction transaction, User user) {
+        return validateUniqueId(transaction) &&
+                validateCorrectUserAccount(transaction, user) &&
+                validateTransactionType(transaction) &&
+                validateAmountAndUserLimits(transaction, user) &&
+                validateEnoughForWithdraw(transaction, user) &&
+                validateIBAN(transaction) &&
+                validateWithdrawFromExistingAccount(transaction, user) &&
+                validateOnlyDebitCardPayment(transaction) &&
+                validateCountry(transaction, user)
+                ;
+    }
+
+    private Optional<User> getUserIfExistsAndNotFrozen(Transaction transaction) {
+        return users.stream().filter(u -> u.getUserId().equals(transaction.getUserId())
+                && u.getFrozen().equals(User.USER_NOT_FROZEN)).findFirst();
+    }
+
+    private boolean validateUniqueId(Transaction transaction) {
+        boolean isIdUnique = events.stream().anyMatch(e -> e.transactionId.equals(transaction.getTransactionId()));
+        if (isIdUnique) {
+            addDeclinedEvent(transaction, String.format("Transaction %s already processed (id non-unique)", transaction.getTransactionId()));
+            return false;
+        }
+        return true;
+    }
+
+    private boolean validateIBAN(Transaction transaction) {
+        if (transaction.getMethod().equals(Transaction.PAYMENT_METHOD_TRANSFER)) {
+            if (transaction.getAccountNumber().length() < 15 ||
+                    transaction.getAccountNumber().length() > 34) {
+                addDeclinedEvent(transaction, String.format("Invalid iban %s", transaction.getAccountNumber()));
+                return false;
+            }
+
+            stringBuilder.setLength(0);
+            stringBuilder.append(transaction.getAccountNumber());
+            String checkDigits = stringBuilder.substring(0, 4);
+            String BBAN = stringBuilder.substring(4);
+            stringBuilder.setLength(0);
+
+            for (char c : (BBAN + checkDigits).toCharArray()) {
+                if (Character.isLetter(c)) {
+                    stringBuilder.append(Character.getNumericValue(c));
+                } else {
+                    stringBuilder.append(c);
+                }
             }
             try {
                 BigInteger checkNumber = new BigInteger(stringBuilder.toString());
-                if (!checkNumber.remainder(BigInteger.valueOf(97)).equals(BigInteger.ONE)){
-                    return returnDeclinedEvent(transaction, String.format("Invalid iban %s", transaction.accountNumber));
+                if (!checkNumber.remainder(BigInteger.valueOf(97)).equals(BigInteger.ONE)) {
+                    addDeclinedEvent(transaction, String.format("Invalid iban %s", transaction.getAccountNumber()));
+                    return false;
                 }
             } catch (Exception e) {
-                return null;
+                return false;
             }
         }
-        return validateAmountAndUserLimits(transaction);
-    }
-    private Event validateAmountAndUserLimits(Transaction transaction) {
-        User user = getUser(transaction);
-        if (user == null) return null;
-
-        if (transaction.amount < 0){
-            return returnDeclinedEvent(transaction, "Amount is negative for transaction");
-        }
-        if (transaction.type.equals(Transaction.TRANSACTION_TYPE_WITHDRAW)){
-            if (user.withdrawMax < transaction.amount){
-                return returnDeclinedEvent(transaction, String.format("Amount %s is over the withdraw limit of %s", formatAmount(transaction.amount), formatAmount(user.withdrawMax)));
-            }
-            if (user.withdrawMin > transaction.amount){
-                return returnDeclinedEvent(transaction, String.format("Amount %s is under the withdraw limit of %s", formatAmount(transaction.amount), formatAmount(user.withdrawMin)));
-            }
-        }
-        if (transaction.type.equals(Transaction.TRANSACTION_TYPE_DEPOSIT)){
-            if (user.depositMax < transaction.amount){
-                return returnDeclinedEvent(transaction, String.format("Amount %s is over the deposit limit of %s", formatAmount(transaction.amount), formatAmount(user.depositMax)));
-            }
-            if (user.depositMin > transaction.amount){
-                return returnDeclinedEvent(transaction, String.format("Amount %s is under the deposit limit of %s", formatAmount(transaction.amount), formatAmount(user.depositMin)));
-            }
-        }
-        return validateCountry(transaction);
+        return true;
     }
 
-    private Event validateCountry(Transaction transaction) {
-        User user = getUser(transaction);
-        if (user == null) return null;
-        if (transaction.method.equals(Transaction.PAYMENT_METHOD_CARD)){
+    private boolean validateAmountAndUserLimits(Transaction transaction, User user) {
+        if (transaction.getAmount().compareTo(BigDecimal.ZERO) < 0) {
+            addDeclinedEvent(transaction, "Amount is negative for transaction");
+            return false;
+        }
+        if (transaction.getType().equals(Transaction.TRANSACTION_TYPE_WITHDRAW)) {
+            if (user.getWithdrawMax().compareTo(transaction.getAmount()) < 0) {
+                addDeclinedEvent(transaction, String.format("Amount %s is over the withdraw limit of %s", formatAmount(transaction.getAmount()), formatAmount(user.getWithdrawMax())));
+                return false;
+            }
+            if (user.getWithdrawMin().compareTo(transaction.getAmount()) > 0) {
+                addDeclinedEvent(transaction, String.format("Amount %s is under the withdraw limit of %s", formatAmount(transaction.getAmount()), formatAmount(user.getWithdrawMin())));
+                return false;
+            }
+        }
+        if (transaction.getType().equals(Transaction.TRANSACTION_TYPE_DEPOSIT)) {
+            if (user.getDepositMax().compareTo(transaction.getAmount()) < 0) {
+                addDeclinedEvent(transaction, String.format("Amount %s is over the deposit limit of %s", formatAmount(transaction.getAmount()), formatAmount(user.getDepositMax())));
+                return false;
+            }
+            if (user.getDepositMin().compareTo(transaction.getAmount()) > 0) {
+                addDeclinedEvent(transaction, String.format("Amount %s is under the deposit limit of %s", formatAmount(transaction.getAmount()), formatAmount(user.getDepositMin())));
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean validateCountry(Transaction transaction, User user) {
+        if (transaction.getMethod().equals(Transaction.PAYMENT_METHOD_CARD)) {
             BinMapping bin = getBinMapping(transaction);
-            if (bin == null) return null;
-            if (!bin.country.equals(getISO3(user.country))){
-                return returnDeclinedEvent(transaction, String.format("Invalid country %s; expected %s (%s)", bin.country, user.country, getISO3(user.country)));
+            if (bin == null) return false;
+
+            if (!bin.getCountry().equals(getISO3(user.getCountry()))) {
+                addDeclinedEvent(transaction, String.format("Invalid country %s; expected %s (%s)", bin.getCountry(), user.getCountry(), getISO3(user.getCountry())));
+                return false;
             }
         }
-        if (transaction.method.equals(Transaction.PAYMENT_METHOD_TRANSFER)){
-            if (!user.country.equals(transaction.accountNumber.substring(0,2))){
-                return returnDeclinedEvent(transaction, String.format("Invalid account country %s; expected %s", transaction.accountNumber.substring(0,2), currentUser.country ));
+        if (transaction.getMethod().equals(Transaction.PAYMENT_METHOD_TRANSFER)) {
+            if (!user.getCountry().equals(transaction.getAccountNumber().substring(0, 2))) {
+                addDeclinedEvent(transaction, String.format("Invalid account country %s; expected %s", transaction.getAccountNumber().substring(0, 2), user.getCountry()));
+                return false;
             }
         }
-        return validateEnoughForWithdraw(transaction);
+        return true;
     }
 
-    private Event validateEnoughForWithdraw(Transaction transaction) {
-        if (transaction.type.equals(Transaction.TRANSACTION_TYPE_WITHDRAW)){
-            Optional<User> userByAccount = users.stream().filter(u -> transaction.getAccountNumber().equals(u.getLastUsedDepositAccount())).findFirst();
-            if (userByAccount.isPresent()){
-                if (!userByAccount.get().getUserId().equals(transaction.userId))
-                    return returnDeclinedEvent(transaction, String.format("Account %s is in use by other user", transaction.getAccountNumber()));
-            };
-            if (currentUser.balance < transaction.amount)
-                return returnDeclinedEvent(transaction, String.format("Not enough balance to withdraw %s - balance is too low at %s", formatAmount(transaction.getAmount()), formatAmount(currentUser.getBalance())));
+    private boolean validateEnoughForWithdraw(Transaction transaction, User user) {
+        if (transaction.getType().equals(Transaction.TRANSACTION_TYPE_WITHDRAW)
+                && user.getBalance().compareTo(transaction.getAmount()) < 0) {
+            addDeclinedEvent(transaction, String.format("Not enough balance to withdraw %s - balance is too low at %s", formatAmount(transaction.getAmount()), formatAmount(user.getBalance())));
+            return false;
         }
-        return validateWithdrawFromLastAccount(transaction);
+        return true;
     }
-    private Event validateWithdrawFromLastAccount(Transaction transaction) {
-        if (transaction.type.equals(Transaction.TRANSACTION_TYPE_WITHDRAW)){
-            User user = getUser(transaction);
-            if (user == null) return null;
 
-            if (user.getLastUsedDepositAccount() == null || !user.getLastUsedDepositAccount().equals(transaction.accountNumber)){
-                return returnDeclinedEvent(transaction, String.format("Cannot withdraw with a new account %s", transaction.getAccountNumber()));
-            }
+    private boolean validateWithdrawFromExistingAccount(Transaction transaction, User user) {
+        if (transaction.getType().equals(Transaction.TRANSACTION_TYPE_WITHDRAW)
+                && userAccounts.get(transaction.getAccountNumber()) == null) {
+            addDeclinedEvent(transaction, String.format("Cannot withdraw with a new account %s", transaction.getAccountNumber()));
+            return false;
         }
-        return validateTransactionType(transaction);
-    }
-    private Event validateTransactionType(Transaction transaction) {
-        if (!transaction.getType().equals(Transaction.TRANSACTION_TYPE_DEPOSIT) && !transaction.getType().equals(Transaction.TRANSACTION_TYPE_WITHDRAW))
-            return returnDeclinedEvent(transaction, "Wrong transaction method");
-        return validateOneUserOneAccountOfEachType(transaction);
-    }
-    private Event validateOneUserOneAccountOfEachType(Transaction transaction) {
-        User user = getUser(transaction);
-        if (user == null) return null;
-
-//        if ((user.getCardAccountNumber() != null && !transaction.getAccountNumber().equals(user.getCardAccountNumber()) && transaction.method.equals(Transaction.PAYMENT_METHOD_CARD)) ||
-//                (user.getTransferAccountNumber() != null && !transaction.getAccountNumber().equals(user.getTransferAccountNumber()) && transaction.method.equals(Transaction.PAYMENT_METHOD_TRANSFER)) ){
-//            return returnDeclinedEvent(transaction, String.format("Cannot withdraw with a new account %s", transaction.getAccountNumber()));
-//        }
-        return validateOnlyDebitCardPayment(transaction);
+        return true;
     }
 
-    private Event validateOnlyDebitCardPayment(Transaction transaction) {
-        if (transaction.method.equals(Transaction.PAYMENT_METHOD_CARD)) {
+    private boolean validateTransactionType(Transaction transaction) {
+        if (!transaction.getType().equals(Transaction.TRANSACTION_TYPE_DEPOSIT)
+                && !transaction.getType().equals(Transaction.TRANSACTION_TYPE_WITHDRAW)) {
+            addDeclinedEvent(transaction, "Wrong transaction method");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean validateCorrectUserAccount(Transaction transaction, User user) {
+        String userId = userAccounts.get(transaction.getAccountNumber());
+        if (userId != null && !user.getUserId().equals(userId)) {
+            addDeclinedEvent(transaction, String.format("Account %s is in use by other user", transaction.getAccountNumber()));
+            return false;
+        }
+        return true;
+    }
+
+    private boolean validateOnlyDebitCardPayment(Transaction transaction) {
+        if (transaction.getMethod().equals(Transaction.PAYMENT_METHOD_CARD)) {
             BinMapping bin = getBinMapping(transaction);
-            if (bin == null) return null;
-            if (!bin.type.equals(BinMapping.DEBIT_CARD)) {
-                return returnDeclinedEvent(transaction, "Only DC cards allowed; got CC");
+            if (bin == null) return false;
+            if (!bin.getType().equals(BinMapping.DEBIT_CARD)) {
+                addDeclinedEvent(transaction, "Only DC cards allowed; got CC");
+                return false;
             }
         }
-        return executeSuccessfulTransaction(transaction);
+        return true;
     }
 
-    private Event executeSuccessfulTransaction(Transaction transaction) {
-        User user = getUser(transaction);
-        if (user == null) return null;
-//        if (transaction.method.equals(Transaction.PAYMENT_METHOD_CARD)
-//                && user.getCardAccountNumber() == null){
-//            user.setCardAccountNumber(transaction.getAccountNumber());
-//        }
-//        if (transaction.method.equals(Transaction.PAYMENT_METHOD_TRANSFER)
-//                && user.getTransferAccountNumber() == null){
-//            user.setTransferAccountNumber(transaction.getAccountNumber());
-//        }
-
-        if (transaction.type.equals(Transaction.TRANSACTION_TYPE_DEPOSIT)){
-            user.setLastUsedDepositAccount(transaction.accountNumber);
-            user.setBalance(user.getBalance() + transaction.amount);
+    private Event createSuccessfulEvent(Transaction transaction, User user) {
+        userAccounts.put(transaction.getAccountNumber(), user.getUserId());
+        if (transaction.getType().equals(Transaction.TRANSACTION_TYPE_DEPOSIT)) {
+            user.setBalance(user.getBalance().add(transaction.getAmount()));
         }
-        if (transaction.type.equals(Transaction.TRANSACTION_TYPE_WITHDRAW))
-            user.setBalance(user.getBalance() - transaction.amount);
-        return new Event(transaction.transactionId, Event.STATUS_APPROVED, "OK");
+        if (transaction.getType().equals(Transaction.TRANSACTION_TYPE_WITHDRAW))
+            user.setBalance(user.getBalance().subtract(transaction.getAmount()));
+        return new Event(transaction.getTransactionId(), Event.STATUS_APPROVED, "OK");
     }
 
-    private BinMapping getBinMapping(Transaction transaction){
-        if (currentBinMapping != null){
-            return currentBinMapping;
-        } else {
-            long accountNumber = Long.parseLong(transaction.accountNumber.substring(0,10));
-            Optional<BinMapping> bin = binMappings.stream().filter(e -> e.getRangeFrom() <= accountNumber
-                    && accountNumber <= e.getRangeTo()).findFirst();
-            if (bin.isPresent()) currentBinMapping = bin.get();
-            return bin.orElse(null);
-        }
+    private BinMapping getBinMapping(Transaction transaction) {
+        long accountNumber = Long.parseLong(transaction.getAccountNumber().substring(0, 10));
+        Optional<BinMapping> bin = binMappings.stream().filter(e -> e.getRangeFrom() <= accountNumber
+                && accountNumber <= e.getRangeTo()).findFirst();
+        return bin.orElse(null);
     }
 
-    private User getUser(Transaction transaction){
-        if (currentUser != null) return currentUser;
-        Optional<User> user = users.stream().filter(u -> u.userId.equals(transaction.userId)
-                && u.frozen.equals(User.USER_NOT_FROZEN)).findFirst();
-        user.ifPresent(value -> currentUser = value);
-        return user.orElse(null);
+    private String formatAmount(BigDecimal amount) {
+        return String.format("%.2f", amount).replace(",", ".");
     }
 
-    private Integer convertToInt(Character character){
-        if (Character.isAlphabetic(character)){
-            return character - 55;
-        } else if (Character.isDigit(character)){
-            return character - 48;
-        }
-        return null;
+    private void addDeclinedEvent(Transaction transaction, String message) {
+        events.add(new Event(transaction.getTransactionId(), Event.STATUS_DECLINED, message));
     }
-    private String formatAmount(Float amount){
-        return String.format("%.2f", amount).replace(",",".");
-    }
-    private Event returnDeclinedEvent(Transaction transaction, String message){
-        return new Event(transaction.transactionId, Event.STATUS_DECLINED, message);
-    }
-    private String getISO3(String iso2Country){
+
+    private String getISO3(String iso2Country) {
         return Locale.of("", iso2Country).getISO3Country();
+    }
+
+    public static boolean isValidIBAN(String iban) {
+        iban = iban.replaceAll("\\s", "").toUpperCase();
+
+        for (int i = 0; i < 2; i++) {
+            if (!Character.isLetter(iban.charAt(i))) {
+                return false;
+            }
+        }
+        iban = iban.substring(4) + iban.substring(0, 4);
+
+        // Replace each letter in the string with two digits, thereby expanding the string
+        StringBuilder numericIBAN = new StringBuilder();
+        for (int i = 0; i < iban.length(); i++) {
+            char c = iban.charAt(i);
+            if (Character.isLetter(c)) {
+                numericIBAN.append(Character.getNumericValue(c));
+            } else {
+                numericIBAN.append(c);
+            }
+        }
+
+        // Convert the string to a BigInteger
+        BigInteger ibanNumericValue = new BigInteger(numericIBAN.toString());
+
+        // Check if the remainder when dividing the IBAN number by 97 is 1
+        return ibanNumericValue.mod(BigInteger.valueOf(97)).intValue() == 1;
     }
 }

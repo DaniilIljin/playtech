@@ -1,21 +1,15 @@
 package dto;
 
+import java.math.BigInteger;
+
 public class BinMapping {
     public static final String DEBIT_CARD = "DC";
     public static final String CREDIT_CARD = "CC";
-    public String name;
-    public Long rangeFrom;
-    public Long rangeTo;
-    public String type;
-    public String country;
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
+    private String name;
+    private Long rangeFrom;
+    private Long rangeTo;
+    private String type;
+    private String country;
 
     public Long getRangeFrom() {
         return rangeFrom;
@@ -31,6 +25,14 @@ public class BinMapping {
 
     public void setRangeTo(Long rangeTo) {
         this.rangeTo = rangeTo;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getType() {
