@@ -40,7 +40,7 @@ public class TeldrassilTransactionProcessor {
 
         Writer.writeBalances(Paths.get(args[3]), users);
         Writer.writeEvents(Paths.get(args[4]), transactionProcessor.events);
-        System.out.println(String.format("Transaction processing finished! Given transactions: %d, Processed transactions: %d", transactions.size(), transactionProcessor.events.size()));
+        System.out.printf("Transaction processing finished! Given transactions: %d, Processed transactions: %d%n", transactions.size(), transactionProcessor.events.size());
     }
 
     private void processTransactions() {
