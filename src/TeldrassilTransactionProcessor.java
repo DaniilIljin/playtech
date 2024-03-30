@@ -5,7 +5,6 @@ import dto.User;
 import util.Reader;
 import util.Writer;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.file.Paths;
@@ -28,7 +27,7 @@ public class TeldrassilTransactionProcessor {
         this.binMappings = binMappings;
     }
 
-    public static void main(final String[] args) throws IOException {
+    public static void main(final String[] args) {
         if (args.length != 5) throw new RuntimeException("Wrong number of file paths provided. Expected: 5. Actual: " + args.length);
 
         List<User> users = Reader.readUsers(Paths.get(args[0]));

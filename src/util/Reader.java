@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Reader {
-    public static List<User> readUsers(final Path path) throws IOException {
+    public static List<User> readUsers(final Path path) {
         ArrayList<User> users = new ArrayList<>();
         try (FileReader reader = new FileReader(path.toFile());
              BufferedReader br = new BufferedReader(reader)) {
@@ -25,6 +25,8 @@ public class Reader {
                     users.add(user);
                 }
             }
+        } catch (IOException e){
+            throw new RuntimeException(String.format("Can not find or read file %s", path.toString()));
         }
         return users;
     }
@@ -56,7 +58,7 @@ public class Reader {
         return user;
     }
 
-    public static List<Transaction> readTransactions(final Path path) throws IOException {
+    public static List<Transaction> readTransactions(final Path path){
         ArrayList<Transaction> transactions = new ArrayList<>();
         try (FileReader reader = new FileReader(path.toFile());
              BufferedReader br = new BufferedReader(reader)) {
@@ -68,6 +70,8 @@ public class Reader {
                     transactions.add(transaction);
                 }
             }
+        } catch (IOException e){
+            throw new RuntimeException(String.format("Can not find or read file %s", path.toString()), e);
         }
         return transactions;
     }
@@ -105,7 +109,7 @@ public class Reader {
         return transaction;
     }
 
-    public static List<BinMapping> readBinMappings(final Path path) throws IOException {
+    public static List<BinMapping> readBinMappings(final Path path){
         ArrayList<BinMapping> binMappings = new ArrayList<>();
         try (FileReader reader = new FileReader(path.toFile());
              BufferedReader br = new BufferedReader(reader)) {
@@ -117,6 +121,8 @@ public class Reader {
                     binMappings.add(binMapping);
                 }
             }
+        }catch (IOException e){
+            throw new RuntimeException(String.format("Can not find or read file %s", path.toString()), e);
         }
         return binMappings;
     }
