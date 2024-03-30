@@ -44,10 +44,10 @@ public class Reader {
             user.setWithdrawMax(new BigDecimal(values[8]));
         } catch (IndexOutOfBoundsException e) {
             System.out.printf(
-                    "Wrong number of parameters in line %s in %s. Expected: %d, Given: %d%n",line, filePath, 9, values.length);
+                    "Skipped line: Wrong number of parameters in line %s in %s. Expected: %d, Given: %d%n",line, filePath, 9, values.length);
             return null;
         }catch (NumberFormatException e){
-            System.out.printf("Can not covert value to BigDecimal in line %s in %s.",line, filePath);
+            System.out.printf("Skipped line: Can not covert value to BigDecimal in line %s in %s.",line, filePath);
             return null;
         } catch (Exception e){
             System.out.printf("Found and skipped corrupted line (%s) in file (%s)%n", line, filePath);
@@ -84,7 +84,7 @@ public class Reader {
                     values[4].equals(Transaction.PAYMENT_METHOD_TRANSFER)){
                 transaction.setMethod(values[4]);
             } else {
-                System.out.printf("Payment method can be only CARD or TRANSFER in line %s in %s. Given: %s%n", line, filePath, values[4]);
+                System.out.printf("Skipped line: Payment method can be only CARD or TRANSFER in line %s in %s. Given: %s%n", line, filePath, values[4]);
                 return null;
             }
             if (values[4].equals(Transaction.PAYMENT_METHOD_CARD)){
@@ -93,10 +93,10 @@ public class Reader {
             transaction.setAccountNumber(values[5]);
             transaction.setAmount(new BigDecimal(values[3]));
         } catch (IndexOutOfBoundsException e) {
-            System.out.printf("Wrong number of parameters in line %s in %s. Expected: %d, Given: %d%n",line, filePath, 6, values.length);
+            System.out.printf("Skipped line: Wrong number of parameters in line %s in %s. Expected: %d, Given: %d%n",line, filePath, 6, values.length);
             return null;
         }catch (NumberFormatException e){
-            System.out.printf("Can not convert value to Long or BigDecimal in line %s in %s.",line, filePath);
+            System.out.printf("Skipped line: Can not convert value to Long or BigDecimal in line %s in %s.",line, filePath);
             return null;
         } catch (Exception e){
             System.out.printf("Found and skipped corrupted line (%s) in file (%s)%n", line, filePath);
@@ -130,21 +130,21 @@ public class Reader {
             binMapping.setRangeTo(Long.parseLong(values[2]));
             if(values[3].equals(BinMapping.DEBIT_CARD) ||
                     values[3].equals(BinMapping.CREDIT_CARD)){
-                System.out.printf("BinMapping type can have be CC or DC in line %s in %s. Given: %s%n",line, filePath, values[3]);
+                System.out.printf("Skipped line: BinMapping type can be CC or DC in line %s in %s. Given: %s%n",line, filePath, values[3]);
                 binMapping.setType(values[3]);
             } else {
                 return null;
             }
             if (values[4].length() != 3) {
-                System.out.printf("Country must be represented in 3-letters C in line %s in %s. Given: %s%n",line, filePath, values[4]);
+                System.out.printf("Skipped line: Country must be represented in 3-letters C in line %s in %s. Given: %s%n",line, filePath, values[4]);
                 return null;
             }
             binMapping.setCountry(values[4]);
         } catch (IndexOutOfBoundsException e) {
-            System.out.printf("Wrong number of parameters in line %s in %s. Expected: %d, Given: %d%n",line, filePath, 5, values.length);
+            System.out.printf("Skipped line: Wrong number of parameters in line %s in %s. Expected: %d, Given: %d%n",line, filePath, 5, values.length);
             return null;
         }catch (NumberFormatException e){
-            System.out.printf("Can not convert value to Long in line %s in %s.",line, filePath);
+            System.out.printf(" Skipped line: Can not convert value to Long in line %s in %s.",line, filePath);
             return null;
         } catch (Exception e){
             System.out.printf("Found and skipped corrupted line (%s) in file (%s)%n", line, filePath);
