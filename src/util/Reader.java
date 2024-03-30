@@ -25,7 +25,7 @@ public class Reader {
                     users.add(user);
                 } else {
                     log(line, path.toString());
-                };
+                }
             }
         }
         return users;
@@ -62,7 +62,7 @@ public class Reader {
                     transactions.add(transaction);
                 } else {
                     log(line, path.toString());
-                };
+                }
             }
         }
         return transactions;
@@ -105,7 +105,7 @@ public class Reader {
                     binMappings.add(binMapping);
                 } else {
                     log(line, path.toString());
-                };
+                }
             }
         }
         return binMappings;
@@ -133,6 +133,6 @@ public class Reader {
     }
 
     private static void log(String line, String filePath){
-        System.out.println(String.format("Found and skipped corrupted line (%s) in file (%s)", line, filePath));
+        System.out.printf("Found and skipped corrupted line (%s) in file (%s)%n", line, filePath);
     }
 }
