@@ -13,14 +13,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Reader {
-    public static List<User> readUsers(final Path filePath) throws IOException {
+    public static List<User> readUsers(final Path path) throws IOException {
         ArrayList<User> users = new ArrayList<>();
-        try (FileReader reader = new FileReader(filePath.toFile());
+        try (FileReader reader = new FileReader(path.toFile());
              BufferedReader br = new BufferedReader(reader)) {
+            br.readLine(); // For skipping heading line
             String line;
             while ((line = br.readLine()) != null) {
                 User user = processUser(line);
-                if (user != null) users.add(user);
+                if (user != null){
+                    users.add(user);
+                } else {
+                    log(line, path.toString());
+                };
             }
         }
         return users;
@@ -49,10 +54,15 @@ public class Reader {
         ArrayList<Transaction> transactions = new ArrayList<>();
         try (FileReader reader = new FileReader(path.toFile());
              BufferedReader br = new BufferedReader(reader)) {
+            br.readLine(); // For skipping heading line
             String line;
             while ((line = br.readLine()) != null) {
                 Transaction transaction = processTransaction(line);
-                if (transaction != null) transactions.add(transaction);
+                if (transaction != null) {
+                    transactions.add(transaction);
+                } else {
+                    log(line, path.toString());
+                };
             }
         }
         return transactions;
@@ -87,10 +97,15 @@ public class Reader {
         ArrayList<BinMapping> binMappings = new ArrayList<>();
         try (FileReader reader = new FileReader(path.toFile());
              BufferedReader br = new BufferedReader(reader)) {
+            br.readLine(); // For skipping heading line
             String line;
             while ((line = br.readLine()) != null) {
                 BinMapping binMapping = processBinMapping(line);
-                if (binMapping != null) binMappings.add(binMapping);
+                if (binMapping != null) {
+                    binMappings.add(binMapping);
+                } else {
+                    log(line, path.toString());
+                };
             }
         }
         return binMappings;
@@ -115,5 +130,9 @@ public class Reader {
             return null;
         }
         return binMapping;
+    }
+
+    private static void log(String line, String filePath){
+        System.out.println(String.format("Found and skipped corrupted line (%s) in file (%s)", line, filePath));
     }
 }

@@ -11,7 +11,7 @@ import java.math.BigInteger;
 import java.nio.file.Paths;
 import java.util.*;
 
-public class TransactionProcessorSample {
+public class TeldrassilTransactionProcessor {
     private final List<Event> events = new ArrayList<>();
     private final Map<String, String> userAccounts = new HashMap<>();
     private final List<User> users;
@@ -19,7 +19,7 @@ public class TransactionProcessorSample {
     private final List<BinMapping> binMappings;
     private final StringBuilder stringBuilder = new StringBuilder();
 
-    public TransactionProcessorSample(
+    public TeldrassilTransactionProcessor(
             final List<User> users,
             final List<Transaction> transactions,
             final List<BinMapping> binMappings) {
@@ -29,15 +29,18 @@ public class TransactionProcessorSample {
     }
 
     public static void main(final String[] args) throws IOException {
+        if (args.length != 5) throw new RuntimeException("Wrong number of file paths provided. Expected: 5. Actual: " + args.length);
+
         List<User> users = Reader.readUsers(Paths.get(args[0]));
         List<Transaction> transactions = Reader.readTransactions(Paths.get(args[1]));
         List<BinMapping> binMappings = Reader.readBinMappings(Paths.get(args[2]));
 
-        TransactionProcessorSample transactionProcessor = new TransactionProcessorSample(users, transactions, binMappings);
+        TeldrassilTransactionProcessor transactionProcessor = new TeldrassilTransactionProcessor(users, transactions, binMappings);
         transactionProcessor.processTransactions();
 
         Writer.writeBalances(Paths.get(args[3]), users);
         Writer.writeEvents(Paths.get(args[4]), transactionProcessor.events);
+        System.out.println(String.format("Transaction processing finished! Given transactions: %d, Processed transactions: %d", transactions.size(), transactionProcessor.events.size()));
     }
 
     private void processTransactions() {
