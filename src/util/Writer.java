@@ -16,7 +16,7 @@ public class Writer {
                 writer.append(user.getUserId()).append(",").append(String.format("%.2f", user.getBalance()).replace(",",".")).append("\n");
             }
         }catch (IOException e){
-            throw new RuntimeException(String.format("Can not write to file %s", filePath.toString()), e);
+            throw new RuntimeException(String.format("Can not write to file %s", filePath), e);
         }
     }
 
@@ -27,7 +27,7 @@ public class Writer {
                 writer.append(event.transactionId).append(",").append(event.status).append(",").append(event.message).append("\n");
             }
         } catch (IOException e){
-            throw new RuntimeException(String.format("Can not write to file %s", filePath.toString()), e);
+            throw new RuntimeException(String.format("Can not write to file %s", filePath), e);
         }
     }
 }

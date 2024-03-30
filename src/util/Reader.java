@@ -26,7 +26,7 @@ public class Reader {
                 }
             }
         } catch (IOException e){
-            throw new RuntimeException(String.format("Can not find or read file %s", path.toString()));
+            throw new RuntimeException(String.format("Can not find or read file %s", path));
         }
         return users;
     }
@@ -71,7 +71,7 @@ public class Reader {
                 }
             }
         } catch (IOException e){
-            throw new RuntimeException(String.format("Can not find or read file %s", path.toString()), e);
+            throw new RuntimeException(String.format("Can not find or read file %s", path), e);
         }
         return transactions;
     }
@@ -122,7 +122,7 @@ public class Reader {
                 }
             }
         }catch (IOException e){
-            throw new RuntimeException(String.format("Can not find or read file %s", path.toString()), e);
+            throw new RuntimeException(String.format("Can not find or read file %s", path), e);
         }
         return binMappings;
     }
